@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Permissões principais da interface da agenda","local":true,"windows":["main"],"permissions":["core:default","notification:allow-is-permission-granted"]}}

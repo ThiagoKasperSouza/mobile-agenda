@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissões principais da interface da agenda",
+  "windows": ["main"],
+  "permissions": ["core:default", "notification:allow-is-permission-granted"]
+}

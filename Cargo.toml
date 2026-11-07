@@ -1,0 +1,20 @@
+[package]
+name = "agenda-frontend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+agenda-core = { path = "shared" }
+js-sys = "0.3"
+leptos = { version = "0.8", features = ["csr"] }
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["SubmitEvent"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
