@@ -57,17 +57,23 @@ fn today_key() -> String {
     )
 }
 
-fn week_days() -> Vec<(String, String, String)> {
-    let today = Date::new_0();
-    let monday_offset = (today.get_day() as i32 + 6) % 7;
-    let mut days = Vec::with_capacity(7);
-    for index in 0..7 {
-        let offset = index - monday_offset;
-        let day = Date::new_with_year_month_day(
-            today.get_full_year(),
-            today.get_month() as i32,
-            today.get_date() as i32 + offset,
-        );
+fn date_parts(key: &str) -> Option<(u32, u32, u32)> {
+    let mut parts = key.split('-');
+    Some((
+        parts.next()?.parse().ok()?,
+        parts.next()?.parse::<u32>().ok()?.checked_sub(1)?,
+        parts.next()?.parse().ok()?,
+    ))
+}
+
+fn days_in_month(year: u32, month: u32) -> u32 {
+    Date::new_with_year_month_day(year, month as i32 + 1, 0).get_date()
+}
+
+fn month_days(year: u32, month: u32) -> Vec<(String, String, String)> {
+    let mut days = Vec::with_capacity(days_in_month(year, month) as usize);
+    for day_number in 1..=days_in_month(year, month) {
+        let day = Date::new_with_year_month_day(year, month as i32, day_number as i32);
         let key = format!(
             "{:04}-{:02}-{:02}",
             day.get_full_year(),
@@ -88,7 +94,7 @@ fn week_days() -> Vec<(String, String, String)> {
     days
 }
 
-fn month_name() -> &'static str {
+fn month_name(month: u32) -> &'static str {
     const MONTHS: [&str; 12] = [
         "Janeiro",
         "Fevereiro",
@@ -103,7 +109,7 @@ fn month_name() -> &'static str {
         "Novembro",
         "Dezembro",
     ];
-    MONTHS[Date::new_0().get_month() as usize]
+    MONTHS[month as usize]
 }
 
 fn format_time(timestamp: i64) -> String {
@@ -143,8 +149,6 @@ fn App() -> impl IntoView {
     let start_ref = NodeRef::<leptos::html::Input>::new();
     let reminder_ref = NodeRef::<leptos::html::Select>::new();
     let tags_ref = NodeRef::<leptos::html::Input>::new();
-    let days = week_days();
-
     {
         let set_events = set_events;
         let set_error_message = set_error_message;
@@ -323,26 +327,69 @@ fn App() -> impl IntoView {
                     <div class="page-heading">
                         <div>
                             <p class="eyebrow">"SEU TEMPO, DO SEU JEITO"</p>
-                            <h1>{month_name()}<span class="heading-caret">"⌄"</span></h1>
+                            <h1>
+                                <select
+                                    class="month-select"
+                                    aria-label="Selecionar mês"
+                                    prop:value=move || date_parts(&selected_day.get())
+                                        .map(|(_, month, _)| month.to_string())
+                                        .unwrap_or_default()
+                                    on:change=move |ev| {
+                                        if let (Some((year, _, day_number)), Ok(month)) = (
+                                            date_parts(&selected_day.get()),
+                                            event_target_value(&ev).parse::<u32>(),
+                                        ) {
+                                            if month < 12 {
+                                                let day = Date::new_with_year_month_day(
+                                                    year,
+                                                    month as i32,
+                                                    day_number.min(days_in_month(year, month)) as i32,
+                                                );
+                                                set_selected_day.set(format!(
+                                                    "{:04}-{:02}-{:02}",
+                                                    day.get_full_year(),
+                                                    day.get_month() + 1,
+                                                    day.get_date()
+                                                ));
+                                            }
+                                        }
+                                    }
+                                >
+                                    {(0..12).map(|month| view! {
+                                        <option value=month.to_string()>{month_name(month)}</option>
+                                    }).collect_view()}
+                                </select>
+                                <span class="heading-caret" aria-hidden="true">"⌄"</span>
+                            </h1>
                         </div>
                         <button class="primary-button mobile-add" on:click=move |_| set_show_form.set(true)>
                             <span class="plus">"+" </span>" Novo"
                         </button>
                     </div>
 
-                    <nav class="week-strip" aria-label="Dias da semana">
-                        {days.into_iter().map(|(key, weekday, number)| {
-                            let is_today = key == today_key();
-                            let day_key = key.clone();
-                            view! {
-                                <button class="day-button" class:selected=move || selected_day.get() == day_key
-                                    class:today=is_today
-                                    on:click=move |_| set_selected_day.set(key.clone())>
-                                    <span class="day-name">{weekday}</span>
-                                    <span class="day-number">{number}</span>
-                                </button>
-                            }
-                        }).collect_view()}
+                    <nav class="month-days" aria-label="Dias do mês">
+                        {move || {
+                            date_parts(&selected_day.get())
+                                .map(|(year, month, _)| {
+                                    month_days(year, month)
+                                        .into_iter()
+                                        .map(|(key, weekday, number)| {
+                                            let is_today = key == today_key();
+                                            let day_key = key.clone();
+                                            view! {
+                                                <button class="day-button" class:selected=move || selected_day.get() == day_key
+                                                    class:today=is_today
+                                                    on:click=move |_| set_selected_day.set(key.clone())>
+                                                    <span class="day-name">{weekday}</span>
+                                                    <span class="day-number">{number}</span>
+                                                </button>
+                                            }
+                                        })
+                                        .collect_view()
+                                        .into_any()
+                                })
+                                .unwrap_or_else(|| ().into_any())
+                        }}
                     </nav>
 
                     <div class="agenda-heading">
@@ -363,10 +410,10 @@ fn App() -> impl IntoView {
                             <label>"Descrição"<textarea node_ref=description_ref maxlength="1000" placeholder="Adicione alguns detalhes..."></textarea></label>
                             <div class="form-row">
                                 <label>"Data e hora"<input node_ref=start_ref type="datetime-local"
-                                    value=move || default_datetime(&selected_day.get()) required /></label>
-                                <label>"Avisar antes"<select node_ref=reminder_ref>
+                                    prop:value=move || default_datetime(&selected_day.get()) required /></label>
+                                <label>"Avisar antes"<select node_ref=reminder_ref prop:value="10">
                                     <option value="5">"5 minutos"</option>
-                                    <option value="10" selected>"10 minutos"</option>
+                                    <option value="10">"10 minutos"</option>
                                     <option value="15">"15 minutos"</option>
                                     <option value="30">"30 minutos"</option>
                                     <option value="60">"1 hora"</option>

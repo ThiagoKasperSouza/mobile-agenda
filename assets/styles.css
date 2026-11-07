@@ -62,9 +62,12 @@ button { color: inherit; cursor: pointer; }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Segoe UI", sans-serif; letter-spacing: -2px; }
 .heading-caret { display: inline-block; margin: 0 0 5px 13px; color: #7f7a72; font: 400 21px "DM Sans",sans-serif; vertical-align: middle; }
+.month-select { max-width: 100%; padding: 0; border: 0; appearance: none; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
+.month-select:focus-visible { outline: 2px solid var(--purple-deep); outline-offset: 4px; border-radius: 4px; }
 .mobile-add { display: none; padding: 11px 14px; }
-.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 7px; border-radius: 19px; background: #252423; }
-.day-button { min-width: 0; padding: 9px 4px 8px; border: 0; border-radius: 13px; background: transparent; color: #fff; }
+.month-days { display: flex; gap: 6px; overflow-x: auto; padding: 7px; border-radius: 19px; background: #252423; scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.month-days::-webkit-scrollbar { display: none; }
+.day-button { flex: 0 0 54px; min-width: 0; padding: 9px 4px 8px; border: 0; border-radius: 13px; background: transparent; color: #fff; scroll-snap-align: start; }
 .day-name { display: block; margin-bottom: 7px; color: #d3d1cd; font-size: 10px; }
 .day-number { display: block; font-size: 14px; font-weight: 500; }
 .day-button.selected { background: var(--purple); color: #2a2431; }
@@ -121,7 +124,7 @@ h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Se
   .page-heading { margin: 0 0 19px; }
   h1 { font-size: 36px; }
   .mobile-add { display: inline-flex; }
-  .week-strip { gap: 3px; padding: 6px; border-radius: 16px; }
+  .month-days { gap: 3px; padding: 6px; border-radius: 16px; }
   .day-button { padding: 8px 2px; border-radius: 11px; }
   .day-name { font-size: 9px; }
   .day-number { font-size: 13px; }

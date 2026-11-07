@@ -38,9 +38,17 @@ fn schedule_reminder(app: &AppHandle, event: &Event) -> Result<(), String> {
 
     #[cfg(mobile)]
     {
-        let permission = app.notification().request_permission().map_err(|error| {
-            format!("Não foi possível solicitar permissão para notificações: {error}")
-        })?;
+        let notification = app.notification();
+        let permission = notification
+            .permission_state()
+            .map_err(|error| format!("Não foi possível verificar a permissão para notificações: {error}"))?;
+        let permission = if permission == PermissionState::Granted {
+            permission
+        } else {
+            notification.request_permission().map_err(|error| {
+                format!("Não foi possível solicitar permissão para notificações: {error}")
+            })?
+        };
         if permission != PermissionState::Granted {
             return Err(
                 "Permita notificações nas configurações do Android para criar este lembrete."
