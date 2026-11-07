@@ -34,7 +34,6 @@ button { color: inherit; cursor: pointer; }
 .primary-button:hover { background: #45413d; transform: translateY(-1px); }
 .secondary-button { background: #efede8; }
 .plus { font-size: 19px; line-height: 12px; }
-.sidebar-add { width: 100%; margin: 2px 0 36px; }
 .sidebar-section { margin: 0 0 33px; }
 .sidebar-section h2, .section-heading h2 { margin: 0; color: #a09d97; font-size: 10px; font-weight: 700; letter-spacing: 1.15px; }
 .sidebar-section > h2 { margin-bottom: 15px; }
@@ -61,21 +60,27 @@ button { color: inherit; cursor: pointer; }
 .eyebrow { margin: 0 0 9px; color: #a09d97; font-size: 10px; font-weight: 700; letter-spacing: 1.25px; }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Segoe UI", sans-serif; letter-spacing: -2px; }
+.heading-year { margin-left: 7px; color: var(--muted); font-size: .45em; letter-spacing: 0; vertical-align: middle; }
 .heading-caret { display: inline-block; margin: 0 0 5px 13px; color: #7f7a72; font: 400 21px "DM Sans",sans-serif; vertical-align: middle; }
 .month-select { max-width: 100%; padding: 0; border: 0; appearance: none; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
 .month-select:focus-visible { outline: 2px solid var(--purple-deep); outline-offset: 4px; border-radius: 4px; }
-.mobile-add { display: none; padding: 11px 14px; }
-.month-days { display: flex; gap: 6px; overflow-x: auto; padding: 7px; border-radius: 19px; background: #252423; scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.page-heading > div { min-width: 0; }
+.calendar-trigger { display: grid; flex: 0 0 auto; place-items: center; width: 48px; height: 48px; margin-bottom: 4px; border: 1px solid var(--line); border-radius: 14px; background: transparent; color: var(--purple-deep); }
+.calendar-trigger svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.calendar-trigger:hover { background: #ebe8e2; }
+.calendar-trigger:focus-visible { outline: 2px solid var(--purple-deep); outline-offset: 3px; }
+.month-days { --day-width: 54px; display: flex; gap: 6px; overflow-x: auto; padding: 7px max(7px, calc((100% - var(--day-width)) / 2)); border-radius: 19px; background: #252423; scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
 .month-days::-webkit-scrollbar { display: none; }
-.day-button { flex: 0 0 54px; min-width: 0; padding: 9px 4px 8px; border: 0; border-radius: 13px; background: transparent; color: #fff; scroll-snap-align: start; }
+.day-button { flex: 0 0 var(--day-width); min-width: 0; padding: 9px 4px 8px; border: 0; border-radius: 13px; background: transparent; color: #fff; scroll-snap-align: center; }
 .day-name { display: block; margin-bottom: 7px; color: #d3d1cd; font-size: 10px; }
 .day-number { display: block; font-size: 14px; font-weight: 500; }
 .day-button.selected { background: var(--purple); color: #2a2431; }
 .day-button.selected .day-name { color: #49365d; }
 .day-button.today:not(.selected) .day-number { color: #c9a8f0; }
-.agenda-heading { display: flex; align-items: end; justify-content: space-between; margin: 35px 2px 16px; }
+.agenda-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 35px 2px 16px; }
 .agenda-heading h2 { margin: 0 0 4px; font: 700 20px "Aptos Display", "Segoe UI", sans-serif; letter-spacing: -.5px; }
 .agenda-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.agenda-add { flex: 0 0 auto; padding: 10px 15px; }
 .text-button { padding: 7px 0; border: 0; background: transparent; color: var(--purple-deep); font-size: 12px; font-weight: 700; }
 .event-list { display: grid; gap: 12px; }
 .event-card { min-height: 142px; padding: 19px 21px 17px; border-radius: 22px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -113,6 +118,39 @@ h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Se
 .error-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 14px; padding: 11px 14px; border: 1px solid #efc7c1; border-radius: 12px; background: #fff1ef; color: #8d3931; font-size: 12px; }
 .error-banner .icon-button { width: 24px; height: 24px; background: transparent; }
 .mobile-reminders { display: none; }
+.calendar-backdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 18px; background: #151413a6; }
+.calendar-modal { display: flex; flex-direction: column; width: min(100%, 520px); max-height: min(780px, calc(100dvh - 36px)); overflow: hidden; padding: 20px; border: 1px solid #45423f; border-radius: 22px; background: #252423; color: #fff; box-shadow: 0 24px 80px #0006; }
+.calendar-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #ffffff20; }
+.calendar-modal-header .eyebrow { margin-bottom: 5px; color: #b6b1ab; }
+.calendar-modal-header h2 { margin: 0; font: 600 22px "Aptos Display", "Segoe UI", sans-serif; }
+.calendar-close, .calendar-month-controls button { display: grid; flex: 0 0 auto; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 11px; background: #ffffff10; color: #fff; font-size: 24px; }
+.calendar-close:hover, .calendar-month-controls button:hover { background: #ffffff20; }
+.calendar-month-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; }
+.calendar-month-controls span { overflow: hidden; color: #d3d1cd; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-month-controls button { width: 34px; height: 34px; font-size: 25px; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.calendar-weekdays { margin-bottom: 5px; color: #bbb7b2; text-align: center; font-size: 11px; }
+.calendar-weekdays span { padding: 7px 0; }
+.calendar-day-spacer { min-height: 45px; }
+.calendar-day { position: relative; display: grid; place-items: center; min-width: 0; min-height: 45px; padding: 0; border: 0; border-radius: 13px; background: transparent; color: #f5f3f0; font-size: 14px; }
+.calendar-day:hover { background: #ffffff18; }
+.calendar-day.today:not(.selected) { outline: 1px solid var(--purple); outline-offset: -2px; }
+.calendar-day.selected { background: var(--purple); color: #2a2431; font-weight: 700; }
+.calendar-event-marker { position: absolute; bottom: 5px; left: 50%; width: 5px; height: 5px; border-radius: 50%; background: var(--purple); transform: translateX(-50%); }
+.calendar-day.selected .calendar-event-marker { background: #49365d; }
+.calendar-events { min-height: 86px; max-height: 150px; overflow-y: auto; margin-top: 15px; padding: 12px 2px 6px; border-top: 1px solid #ffffff20; }
+.calendar-events h3 { margin: 0 0 8px; color: #d3d1cd; font-size: 13px; font-weight: 600; }
+.calendar-no-events { margin: 0; color: #aaa6a0; font-size: 12px; }
+.calendar-event-row { display: flex; align-items: baseline; gap: 12px; padding: 5px 0; font-size: 12px; }
+.calendar-event-row time { flex: 0 0 auto; color: var(--purple); font-variant-numeric: tabular-nums; }
+.calendar-event-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-modal-actions { display: flex; justify-content: space-between; gap: 10px; padding-top: 15px; border-top: 1px solid #ffffff20; }
+.calendar-modal-actions button { min-height: 42px; padding: 10px 14px; font-size: 12px; }
+.calendar-modal-actions .secondary-button { background: #ffffff14; color: #fff; }
+.calendar-modal-actions .secondary-button:hover { background: #ffffff24; }
+.calendar-modal-actions .calendar-select-button { margin-left: auto; border: 1px solid #ffffff30; }
+.calendar-modal-actions .primary-button { background: var(--purple); color: #2a2431; }
+.calendar-modal-actions .primary-button:hover { background: #c9a9ee; }
 
 @media (max-width: 760px) {
   .topbar { height: 61px; padding: 0 20px; }
@@ -123,12 +161,14 @@ h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Se
   .main-content { max-width: none; }
   .page-heading { margin: 0 0 19px; }
   h1 { font-size: 36px; }
-  .mobile-add { display: inline-flex; }
-  .month-days { gap: 3px; padding: 6px; border-radius: 16px; }
+  .calendar-trigger { width: 42px; height: 42px; margin-bottom: 2px; border-radius: 12px; }
+  .calendar-trigger svg { width: 21px; height: 21px; }
+  .month-days { --day-width: 43px; gap: 3px; padding: 6px max(6px, calc((100% - var(--day-width)) / 2)); border-radius: 16px; }
   .day-button { padding: 8px 2px; border-radius: 11px; }
   .day-name { font-size: 9px; }
   .day-number { font-size: 13px; }
   .agenda-heading { margin-top: 28px; }
+  .agenda-add { padding: 10px 13px; }
   .event-card { min-height: 135px; padding: 17px 17px 15px; border-radius: 19px; }
   .event-card h3 { font-size: 21px; }
   .event-card p { max-width: 240px; font-size: 11px; line-height: 1.45; }
@@ -137,6 +177,11 @@ h1 { margin-bottom: 0; font: 600 clamp(34px, 4vw, 46px)/1.1 "Aptos Display", "Se
   .mobile-reminders { display: block; margin-top: 29px; padding-top: 20px; border-top: 1px solid var(--line); }
   .mobile-reminder-row { display: flex; gap: 11px; padding: 9px 0; color: #66615b; font-size: 12px; }
   .reminder-clock { color: var(--purple-deep); font-weight: 700; }
+  .calendar-backdrop { padding: 12px; }
+  .calendar-modal { max-height: calc(100dvh - 24px); padding: 16px; border-radius: 19px; }
+  .calendar-day, .calendar-day-spacer { min-height: 40px; }
+  .calendar-modal-actions { gap: 7px; }
+  .calendar-modal-actions button { padding: 9px 10px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

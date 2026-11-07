@@ -11,7 +11,7 @@ serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["SubmitEvent"] }
+web-sys = { version = "0.3", features = ["Element", "HtmlElement", "ScrollBehavior", "ScrollIntoViewOptions", "ScrollLogicalPosition", "SubmitEvent", "console"] }
 
 [profile.release]
 opt-level = "z"

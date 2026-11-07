@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
+use web_sys::{ScrollBehavior, ScrollIntoViewOptions, ScrollLogicalPosition};
 
 #[wasm_bindgen(inline_js = r#"
 export async function invokeTauri(command, args) {
@@ -66,8 +67,34 @@ fn date_parts(key: &str) -> Option<(u32, u32, u32)> {
     ))
 }
 
+fn month_start_key(key: &str) -> String {
+    date_parts(key)
+        .map(|(year, month, _)| format!("{year:04}-{:02}-01", month + 1))
+        .unwrap_or_else(|| key.to_string())
+}
+
 fn days_in_month(year: u32, month: u32) -> u32 {
     Date::new_with_year_month_day(year, month as i32 + 1, 0).get_date()
+}
+
+fn shift_month(year: u32, month: u32, day: u32, offset: i32) -> (String, String) {
+    let month_date = Date::new_with_year_month_day(year, month as i32 + offset, 1);
+    let target_year = month_date.get_full_year();
+    let target_month = month_date.get_month();
+    let selected_date = Date::new_with_year_month_day(
+        target_year,
+        target_month as i32,
+        day.min(days_in_month(target_year, target_month)) as i32,
+    );
+    (
+        format!("{target_year:04}-{:02}-01", target_month + 1),
+        format!(
+            "{:04}-{:02}-{:02}",
+            selected_date.get_full_year(),
+            selected_date.get_month() + 1,
+            selected_date.get_date()
+        ),
+    )
 }
 
 fn month_days(year: u32, month: u32) -> Vec<(String, String, String)> {
@@ -139,9 +166,13 @@ fn default_datetime(day: &str) -> String {
 #[component]
 fn App() -> impl IntoView {
     let (events, set_events) = signal(Vec::<Event>::new());
-    let (selected_day, set_selected_day) = signal(today_key());
+    let initial_day = today_key();
+    let (selected_day, set_selected_day) = signal(initial_day.clone());
+    let (calendar_day, set_calendar_day) = signal(initial_day.clone());
+    let (calendar_month, set_calendar_month) = signal(month_start_key(&initial_day));
     let (selected_tag, set_selected_tag) = signal(String::new());
     let (show_form, set_show_form) = signal(false);
+    let (show_calendar, set_show_calendar) = signal(false);
     let (error_message, set_error_message) = signal(String::new());
     let (loading, set_loading) = signal(true);
     let title_ref = NodeRef::<leptos::html::Input>::new();
@@ -149,6 +180,28 @@ fn App() -> impl IntoView {
     let start_ref = NodeRef::<leptos::html::Input>::new();
     let reminder_ref = NodeRef::<leptos::html::Select>::new();
     let tags_ref = NodeRef::<leptos::html::Input>::new();
+    let day_strip_ref = NodeRef::<leptos::html::Nav>::new();
+
+    {
+        let day_strip_ref = day_strip_ref;
+        Effect::new(move |_| {
+            let selected = selected_day.get();
+            if let Some(day_strip) = day_strip_ref.get() {
+                match day_strip.query_selector(&format!("[data-day='{selected}']")) {
+                    Ok(Some(day)) => {
+                        let options = ScrollIntoViewOptions::new();
+                        options.set_behavior(ScrollBehavior::Smooth);
+                        options.set_block(ScrollLogicalPosition::Nearest);
+                        options.set_inline(ScrollLogicalPosition::Center);
+                        day.scroll_into_view_with_scroll_into_view_options(&options);
+                    }
+                    Ok(None) => {}
+                    Err(error) => web_sys::console::error_1(&error),
+                }
+            }
+        });
+    }
+
     {
         let set_events = set_events;
         let set_error_message = set_error_message;
@@ -262,9 +315,6 @@ fn App() -> impl IntoView {
 
             <div class="workspace">
                 <aside class="sidebar">
-                    <button class="primary-button sidebar-add" on:click=move |_| set_show_form.set(true)>
-                        <span class="plus">"+" </span>" Novo evento"
-                    </button>
                     <section class="sidebar-section">
                         <h2>"ATALHOS"</h2>
                         <button class="sidebar-link active" on:click=move |_| set_selected_tag.set(String::new())>
@@ -328,46 +378,65 @@ fn App() -> impl IntoView {
                         <div>
                             <p class="eyebrow">"SEU TEMPO, DO SEU JEITO"</p>
                             <h1>
-                                <select
-                                    class="month-select"
-                                    aria-label="Selecionar mês"
-                                    prop:value=move || date_parts(&selected_day.get())
-                                        .map(|(_, month, _)| month.to_string())
-                                        .unwrap_or_default()
-                                    on:change=move |ev| {
-                                        if let (Some((year, _, day_number)), Ok(month)) = (
-                                            date_parts(&selected_day.get()),
-                                            event_target_value(&ev).parse::<u32>(),
-                                        ) {
-                                            if month < 12 {
-                                                let day = Date::new_with_year_month_day(
-                                                    year,
-                                                    month as i32,
-                                                    day_number.min(days_in_month(year, month)) as i32,
-                                                );
-                                                set_selected_day.set(format!(
-                                                    "{:04}-{:02}-{:02}",
-                                                    day.get_full_year(),
-                                                    day.get_month() + 1,
-                                                    day.get_date()
-                                                ));
+                                    <select
+                                        class="month-select"
+                                        aria-label="Selecionar mês"
+                                        prop:value=move || date_parts(&selected_day.get())
+                                            .map(|(_, month, _)| month.to_string())
+                                            .unwrap_or_default()
+                                        on:change=move |ev| {
+                                            if let (Some((year, _, day_number)), Ok(month)) = (
+                                                date_parts(&selected_day.get()),
+                                                event_target_value(&ev).parse::<u32>(),
+                                            ) {
+                                                if month < 12 {
+                                                    let day = Date::new_with_year_month_day(
+                                                        year,
+                                                        month as i32,
+                                                        day_number.min(days_in_month(year, month)) as i32,
+                                                    );
+                                                    set_selected_day.set(format!(
+                                                        "{:04}-{:02}-{:02}",
+                                                        day.get_full_year(),
+                                                        day.get_month() + 1,
+                                                        day.get_date()
+                                                    ));
+                                                }
                                             }
                                         }
-                                    }
-                                >
-                                    {(0..12).map(|month| view! {
-                                        <option value=month.to_string()>{month_name(month)}</option>
-                                    }).collect_view()}
-                                </select>
-                                <span class="heading-caret" aria-hidden="true">"⌄"</span>
+                                    >
+                                        {(0..12).map(|month| view! {
+                                            <option value=month.to_string()>{month_name(month)}</option>
+                                        }).collect_view()}
+                                    </select>
+                                    <span class="heading-caret" aria-hidden="true">"⌄"</span>
+                                    <span class="heading-year">
+                                        {move || date_parts(&selected_day.get())
+                                            .map(|(year, _, _)| year.to_string())
+                                            .unwrap_or_default()}
+                                    </span>
                             </h1>
                         </div>
-                        <button class="primary-button mobile-add" on:click=move |_| set_show_form.set(true)>
-                            <span class="plus">"+" </span>" Novo"
+                        <button
+                            type="button"
+                            class="calendar-trigger"
+                            aria-label="Abrir calendário mensal"
+                            title="Abrir calendário mensal"
+                            on:click=move |_| {
+                                let day = selected_day.get();
+                                set_calendar_day.set(day.clone());
+                                set_calendar_month.set(month_start_key(&day));
+                                set_show_calendar.set(true);
+                            }
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3.5" y="5" width="17" height="16" rx="2.5"></rect>
+                                <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"></path>
+                            </svg>
                         </button>
                     </div>
 
-                    <nav class="month-days" aria-label="Dias do mês">
+                    <nav node_ref=day_strip_ref class="month-days" aria-label="Dias do mês">
                         {move || {
                             date_parts(&selected_day.get())
                                 .map(|(year, month, _)| {
@@ -379,6 +448,7 @@ fn App() -> impl IntoView {
                                             view! {
                                                 <button class="day-button" class:selected=move || selected_day.get() == day_key
                                                     class:today=is_today
+                                                    data-day=key.clone()
                                                     on:click=move |_| set_selected_day.set(key.clone())>
                                                     <span class="day-name">{weekday}</span>
                                                     <span class="day-number">{number}</span>
@@ -392,12 +462,208 @@ fn App() -> impl IntoView {
                         }}
                     </nav>
 
+                    <Show when=move || show_calendar.get()>
+                        <div class="calendar-backdrop">
+                            <section
+                                class="calendar-modal"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="calendar-modal-title"
+                            >
+                                <header class="calendar-modal-header">
+                                    <div>
+                                        <p class="eyebrow">"AGENDA MENSAL"</p>
+                                        <h2 id="calendar-modal-title">
+                                            {move || {
+                                                date_parts(&calendar_month.get())
+                                                    .map(|(year, month, _)| format!("{} {year}", month_name(month)))
+                                                    .unwrap_or_default()
+                                            }}
+                                        </h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="calendar-close"
+                                        aria-label="Fechar calendário"
+                                        on:click=move |_| set_show_calendar.set(false)
+                                    >
+                                        "×"
+                                    </button>
+                                </header>
+
+                                <div class="calendar-month-controls">
+                                    <button
+                                        type="button"
+                                        aria-label="Mês anterior"
+                                        on:click=move |_| {
+                                            if let (Some((year, month, _)), Some((_, _, day))) = (
+                                                date_parts(&calendar_month.get()),
+                                                date_parts(&calendar_day.get()),
+                                            ) {
+                                                let (month_key, day_key) = shift_month(year, month, day, -1);
+                                                set_calendar_month.set(month_key);
+                                                set_calendar_day.set(day_key);
+                                            }
+                                        }
+                                    >
+                                        "‹"
+                                    </button>
+                                    <span>
+                                        {move || {
+                                            date_parts(&calendar_day.get())
+                                                .map(|(year, month, day)| {
+                                                    format!("{day} de {} de {year}", month_name(month))
+                                                })
+                                                .unwrap_or_default()
+                                        }}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        aria-label="Próximo mês"
+                                        on:click=move |_| {
+                                            if let (Some((year, month, _)), Some((_, _, day))) = (
+                                                date_parts(&calendar_month.get()),
+                                                date_parts(&calendar_day.get()),
+                                            ) {
+                                                let (month_key, day_key) = shift_month(year, month, day, 1);
+                                                set_calendar_month.set(month_key);
+                                                set_calendar_day.set(day_key);
+                                            }
+                                        }
+                                    >
+                                        "›"
+                                    </button>
+                                </div>
+
+                                <div class="calendar-weekdays" aria-hidden="true">
+                                    {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+                                        .into_iter()
+                                        .map(|weekday| view! { <span>{weekday}</span> })
+                                        .collect_view()}
+                                </div>
+
+                                <div class="calendar-grid" role="grid" aria-label="Dias do mês">
+                                    {move || {
+                                        if let Some((year, month, _)) = date_parts(&calendar_month.get()) {
+                                            let first_weekday =
+                                                Date::new_with_year_month_day(year, month as i32, 1).get_day();
+                                            let event_counts = events.get().into_iter().fold(
+                                                std::collections::HashMap::<String, usize>::new(),
+                                                |mut counts, event| {
+                                                    *counts.entry(date_key(event.starts_at)).or_default() += 1;
+                                                    counts
+                                                },
+                                            );
+                                            let mut cells = Vec::new();
+                                            for _ in 0..first_weekday {
+                                                cells.push(view! {
+                                                    <span class="calendar-day-spacer" aria-hidden="true"></span>
+                                                }.into_any());
+                                            }
+                                            for (key, weekday, number) in month_days(year, month) {
+                                                let event_count = event_counts.get(&key).copied().unwrap_or_default();
+                                                let day_key = key.clone();
+                                                let selected_key = key.clone();
+                                                let is_today = key == today_key();
+                                                let accessible_label = if event_count == 1 {
+                                                    format!("{weekday} {number}, 1 evento")
+                                                } else {
+                                                    format!("{weekday} {number}, {event_count} eventos")
+                                                };
+                                                cells.push(view! {
+                                                    <button
+                                                        type="button"
+                                                        class="calendar-day"
+                                                        class:selected=move || calendar_day.get() == selected_key
+                                                        class:today=is_today
+                                                        role="gridcell"
+                                                        aria-label=accessible_label
+                                                        aria-pressed=move || calendar_day.get() == day_key
+                                                        on:click=move |_| set_calendar_day.set(key.clone())
+                                                    >
+                                                        <span>{number}</span>
+                                                        {if event_count > 0 {
+                                                            view! { <span class="calendar-event-marker" aria-hidden="true"></span> }.into_any()
+                                                        } else {
+                                                            ().into_any()
+                                                        }}
+                                                    </button>
+                                                }.into_any());
+                                            }
+                                            cells.collect_view().into_any()
+                                        } else {
+                                            ().into_any()
+                                        }
+                                    }}
+                                </div>
+
+                                <section class="calendar-events" aria-live="polite">
+                                    <h3>
+                                        {move || {
+                                            date_parts(&calendar_day.get())
+                                                .map(|(year, month, day)| {
+                                                    format!("{day} de {} de {year}", month_name(month))
+                                                })
+                                                .unwrap_or_default()
+                                        }}
+                                    </h3>
+                                    {move || {
+                                        let day = calendar_day.get();
+                                        let day_events: Vec<Event> = events
+                                            .get()
+                                            .into_iter()
+                                            .filter(|event| date_key(event.starts_at) == day)
+                                            .collect();
+                                        if day_events.is_empty() {
+                                            view! {
+                                                <p class="calendar-no-events">"Nenhum evento nesta data."</p>
+                                            }.into_any()
+                                        } else {
+                                            day_events.into_iter().map(|event| view! {
+                                                <div class="calendar-event-row">
+                                                    <time>{format_time(event.starts_at)}</time>
+                                                    <span>{event.title}</span>
+                                                </div>
+                                            }).collect_view().into_any()
+                                        }
+                                    }}
+                                </section>
+
+                                <footer class="calendar-modal-actions">
+                                    <button
+                                        type="button"
+                                        class="secondary-button calendar-select-button"
+                                        on:click=move |_| {
+                                            set_selected_day.set(calendar_day.get());
+                                            set_show_calendar.set(false);
+                                        }
+                                    >
+                                        "Selecionar data"
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="primary-button"
+                                        on:click=move |_| {
+                                            set_selected_day.set(calendar_day.get());
+                                            set_show_calendar.set(false);
+                                            set_show_form.set(true);
+                                        }
+                                    >
+                                        "+ Novo evento"
+                                    </button>
+                                </footer>
+                            </section>
+                        </div>
+                    </Show>
+
                     <div class="agenda-heading">
                         <div>
                             <h2>"Sua agenda"</h2>
                             <p>{move || format!("{} eventos no dia", events.get().iter().filter(|event| date_key(event.starts_at) == selected_day.get()).count())}</p>
                         </div>
-                        <button class="text-button" on:click=move |_| set_show_form.set(true)>"+" " Adicionar"</button>
+                        <button class="primary-button agenda-add" on:click=move |_| set_show_form.set(true)>
+                            <span class="plus">"+" </span>" Novo"
+                        </button>
                     </div>
 
                     <Show when=move || show_form.get()>
